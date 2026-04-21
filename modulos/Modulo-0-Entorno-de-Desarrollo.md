@@ -2,7 +2,7 @@
 
 ## Descripción del Workshop
 
-Acompañá a **Sebastián Morales**, CTO de **FinTrack S.A.**, mientras construís desde cero un servidor y un cliente MCP integrados en un chatbot CLI con AWS Bedrock.
+Acompañá a **Santiago**, CTO de **XYZ S.A.**, mientras construís desde cero un servidor y un cliente MCP integrados en un chatbot CLI con AWS Bedrock.
 
 El workshop está organizado en módulos progresivos. Los módulos 0 al 10 construyen el servidor MCP paso a paso. Los módulos 11 y 12 muestran dos casos de uso de negocio reales corriendo sobre esa misma arquitectura.
 
