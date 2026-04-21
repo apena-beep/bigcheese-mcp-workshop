@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Búsqueda de Talento — BigCheese</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple:      #8A7DFF;
+      --purple-dark: #6B5FCC;
+      --purple-light:#E8E5FF;
+      --green:       #1A8A5A;
+      --green-light: #E6F5EE;
+      --yellow:      #FAE428;
+      --yellow-light:#FFFBDB;
+      --red:         #B03030;
+      --red-light:   #FDECEA;
+      --gray-100:    #F7F7F7;
+      --gray-200:    #E8E8E8;
+      --gray-500:    #888;
+      --gray-800:    #222;
+      --white:       #FFFFFF;
+      --accent:      #8A7DFF;
+    }
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--gray-800);
+      background: var(--gray-100);
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Source Serif 4', serif;
+      color: var(--purple);
+      line-height: 1.25;
+    }
+
+    /* ── Layout ── */
+    .page {
+      max-width: 960px;
+      margin: 40px auto;
+      background: var(--white);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 32px rgba(107,45,139,.12);
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, var(--purple-dark) 0%, var(--purple) 100%);
+      color: var(--white);
+      padding: 48px 64px 40px;
+    }
+
+    .header-logo {
+      height: 40px;
+      margin-bottom: 36px;
+      display: block;
+    }
+
+    .header-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: .7;
+      margin-bottom: 10px;
+    }
+
+    .header h1 {
+      font-family: 'Source Serif 4', serif;
+      color: var(--white);
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .header-requirement {
+      font-size: .95rem;
+      opacity: .8;
+      max-width: 600px;
+      margin-bottom: 32px;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      border-top: 1px solid rgba(255,255,255,.2);
+      padding-top: 20px;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-family: 'Source Serif 4', serif;
+      font-size: 1.8rem;
+      font-weight: 600;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: .65;
+    }
+
+    /* ── Body ── */
+    .body {
+      padding: 52px 64px;
+    }
+
+    /* ── Section ── */
+    .section {
+      margin-bottom: 52px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .section h2 {
+      font-size: 1.5rem;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--purple-light);
+    }
+
+    /* ── Fit badge ── */
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 50px;
+    }
+
+    .badge-high   { background: var(--green-light);  color: var(--green); }
+    .badge-medium { background: var(--yellow-light); color: var(--yellow); }
+    .badge-low    { background: var(--red-light);    color: var(--red); }
+
+    /* ── Candidate card ── */
+    .candidate-card {
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      transition: box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .candidate-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+    }
+
+    .candidate-card.fit-high::before   { background: var(--green); }
+    .candidate-card.fit-medium::before { background: var(--yellow); }
+    .candidate-card.fit-low::before    { background: var(--red); }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .card-identity {}
+
+    .card-identity h3 {
+      font-size: 1.1rem;
+      margin-bottom: 2px;
+    }
+
+    .card-role {
+      font-size: .85rem;
+      color: var(--gray-500);
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .card-location {
+      font-size: .8rem;
+      color: var(--gray-500);
+      margin-top: 2px;
+    }
+
+    /* ── Avatar placeholder ── */
+    .avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--purple-light);
+      color: var(--purple);
+      font-family: 'Source Serif 4', serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      text-overflow: clip;
+      white-space: nowrap;
+    }
+
+    /* ── Match points ── */
+    .match-section {
+      margin-top: 16px;
+    }
+
+    .match-title {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .match-list {
+      list-style: none;
+    }
+
+    .match-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: .875rem;
+      color: #444;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .match-list li:last-child { border-bottom: none; }
+
+    .match-list li::before {
+      content: '✓';
+      color: var(--green);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── Gaps ── */
+    .gaps {
+      margin-top: 14px;
+      background: var(--gray-100);
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+
+    .gaps-title {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      margin-bottom: 6px;
+    }
+
+    .gaps p {
+      font-size: .85rem;
+      color: #666;
+      margin: 0;
+    }
+
+    /* ── Certs strip ── */
+    .certs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 14px;
+    }
+
+    .cert-tag {
+      font-size: .75rem;
+      background: var(--purple-light);
+      color: var(--purple-dark);
+      padding: 3px 10px;
+      border-radius: 50px;
+      font-weight: 500;
+    }
+
+    /* ── Discarded section ── */
+    .discarded-list {
+      list-style: none;
+      margin-top: 8px;
+    }
+
+    .discarded-list li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--gray-200);
+      font-size: .875rem;
+      color: #555;
+    }
+
+    .discarded-list li:last-child { border-bottom: none; }
+
+    .discarded-list li::before {
+      content: '✕';
+      color: var(--red);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── Recommendation box ── */
+    .recommendation {
+      background: var(--purple-light);
+      border-left: 4px solid var(--purple);
+      border-radius: 0 10px 10px 0;
+      padding: 24px 28px;
+      margin-top: 8px;
+    }
+
+    .recommendation h3 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    .recommendation p {
+      font-size: .9rem;
+      color: var(--purple-dark);
+      margin: 0;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      background: var(--gray-100);
+      border-top: 1px solid var(--gray-200);
+      padding: 20px 64px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--gray-500);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer img { height: 26px; opacity: .6; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .header, .body { padding: 32px 24px; }
+      .header h1 { font-size: 1.5rem; }
+      .footer { padding: 16px 24px; }
+      .candidate-card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══ HEADER ══ -->
+  <div class="header">
+    <img class="header-logo" src="docs/resources/Copia de BigCheeseLab - Negro.png" alt="BigCheese" />
+    <div class="header-label">Búsqueda de Talento</div>
+    <h1>[SEARCH_TITLE]</h1>
+    <p class="header-requirement">Requerimiento: [REQUIREMENT]</p>
+    <div class="header-stats">
+      <div class="stat">
+        <span class="stat-number">[TOTAL_EVALUATED]</span>
+        <span class="stat-label">Perfiles evaluados</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">[TOTAL_MATCH]</span>
+        <span class="stat-label">Con match</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">[TOTAL_HIGH]</span>
+        <span class="stat-label">Fit alto</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">[SEARCH_DATE]</span>
+        <span class="stat-label">Fecha</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BODY ══ -->
+  <div class="body">
+
+    <!-- Perfiles Recomendados -->
+    <div class="section">
+      <div class="section-label">Resultados</div>
+      <h2>Perfiles Recomendados</h2>
+
+      <!-- CANDIDATE 1 — HIGH FIT -->
+      <div class="candidate-card fit-high">
+        <div class="card-header">
+          <div style="display:flex; gap:16px; align-items:center;">
+            <div class="avatar">[CANDIDATE_1_INITIALS]</div>
+            <div class="card-identity">
+              <h3>[CANDIDATE_1_NAME]</h3>
+              <div class="card-role">[CANDIDATE_1_ROLE]</div>
+              <div class="card-location">[CANDIDATE_1_LOCATION]</div>
+            </div>
+          </div>
+          <span class="badge badge-high">Fit Alto</span>
+        </div>
+        <div class="certs">
+          <!-- Repeat cert-tag as needed -->
+          <span class="cert-tag">[CANDIDATE_1_CERT_1]</span>
+          <span class="cert-tag">[CANDIDATE_1_CERT_2]</span>
+          <span class="cert-tag">[CANDIDATE_1_CERT_3]</span>
+        </div>
+        <div class="match-section">
+          <div class="match-title">Por qué encaja</div>
+          <ul class="match-list">
+            <li>[CANDIDATE_1_MATCH_1]</li>
+            <li>[CANDIDATE_1_MATCH_2]</li>
+            <li>[CANDIDATE_1_MATCH_3]</li>
+          </ul>
+        </div>
+        <div class="gaps">
+          <div class="gaps-title">Consideraciones</div>
+          <p>[CANDIDATE_1_GAPS]</p>
+        </div>
+      </div>
+
+      <!-- CANDIDATE 2 — HIGH FIT -->
+      <div class="candidate-card fit-high">
+        <div class="card-header">
+          <div style="display:flex; gap:16px; align-items:center;">
+            <div class="avatar">[CANDIDATE_2_INITIALS]</div>
+            <div class="card-identity">
+              <h3>[CANDIDATE_2_NAME]</h3>
+              <div class="card-role">[CANDIDATE_2_ROLE]</div>
+              <div class="card-location">[CANDIDATE_2_LOCATION]</div>
+            </div>
+          </div>
+          <span class="badge badge-high">Fit Alto</span>
+        </div>
+        <div class="certs">
+          <span class="cert-tag">[CANDIDATE_2_CERT_1]</span>
+          <span class="cert-tag">[CANDIDATE_2_CERT_2]</span>
+        </div>
+        <div class="match-section">
+          <div class="match-title">Por qué encaja</div>
+          <ul class="match-list">
+            <li>[CANDIDATE_2_MATCH_1]</li>
+            <li>[CANDIDATE_2_MATCH_2]</li>
+            <li>[CANDIDATE_2_MATCH_3]</li>
+          </ul>
+        </div>
+        <div class="gaps">
+          <div class="gaps-title">Consideraciones</div>
+          <p>[CANDIDATE_2_GAPS]</p>
+        </div>
+      </div>
+
+      <!-- CANDIDATE 3 — MEDIUM FIT -->
+      <div class="candidate-card fit-medium">
+        <div class="card-header">
+          <div style="display:flex; gap:16px; align-items:center;">
+            <div class="avatar">[CANDIDATE_3_INITIALS]</div>
+            <div class="card-identity">
+              <h3>[CANDIDATE_3_NAME]</h3>
+              <div class="card-role">[CANDIDATE_3_ROLE]</div>
+              <div class="card-location">[CANDIDATE_3_LOCATION]</div>
+            </div>
+          </div>
+          <span class="badge badge-medium">Fit Medio</span>
+        </div>
+        <div class="certs">
+          <span class="cert-tag">[CANDIDATE_3_CERT_1]</span>
+          <span class="cert-tag">[CANDIDATE_3_CERT_2]</span>
+        </div>
+        <div class="match-section">
+          <div class="match-title">Por qué encaja</div>
+          <ul class="match-list">
+            <li>[CANDIDATE_3_MATCH_1]</li>
+            <li>[CANDIDATE_3_MATCH_2]</li>
+          </ul>
+        </div>
+        <div class="gaps">
+          <div class="gaps-title">Consideraciones</div>
+          <p>[CANDIDATE_3_GAPS]</p>
+        </div>
+      </div>
+
+    </div><!-- /Perfiles Recomendados -->
+
+    <!-- Perfiles Descartados -->
+    <div class="section">
+      <div class="section-label">Descartados</div>
+      <h2>Perfiles No Aplicables</h2>
+      <ul class="discarded-list">
+        <li>[DISCARDED_1]</li>
+        <li>[DISCARDED_2]</li>
+        <li>[DISCARDED_3]</li>
+        <li>[DISCARDED_4]</li>
+      </ul>
+    </div>
+
+    <!-- Recomendación Final -->
+    <div class="section">
+      <div class="section-label">Conclusión</div>
+      <h2>Recomendación Final</h2>
+      <div class="recommendation">
+        <h3>[RECOMMENDATION_TITLE]</h3>
+        <p>[RECOMMENDATION_TEXT]</p>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- ══ FOOTER ══ -->
+  <div class="footer">
+    <img src="docs/resources/Powered-By_logo-horiz_CMYK (1) (1).png" alt="AWS Partner" />
+    <span>wearebigcheese.com · info@bigcheese.com.uy</span>
+    <span>Uso interno — [SEARCH_DATE]</span>
+  </div>
+
+</div><!-- /page -->
+</body>
+</html>
