@@ -2,7 +2,7 @@
 
 ## Descripción del Workshop
 
-Acompañá a **Santiago**, CTO de **XYZ S.A.**, mientras construís desde cero un servidor y un cliente MCP integrados en un chatbot CLI con AWS Bedrock.
+Acompañá a **SAntiago**, CTO de **XYZ S.A.**, mientras construís desde cero un servidor y un cliente MCP integrados en un chatbot CLI con AWS Bedrock.
 
 El workshop está organizado en módulos progresivos. Los módulos 0 al 10 construyen el servidor MCP paso a paso. Los módulos 11 y 12 muestran dos casos de uso de negocio reales corriendo sobre esa misma arquitectura.
 
@@ -22,11 +22,11 @@ El workshop está organizado en módulos progresivos. Los módulos 0 al 10 const
 
 Ingresá a la [Consola de AWS](https://console.aws.amazon.com). En el buscador de servicios escribí **CloudFormation** y seleccioná el servicio.
 
-![Buscar CloudFormation en la consola de AWS](assets/img/cloud_formation.png)
+![Buscar CloudFormation en la consola de AWS](https://raw.githubusercontent.com/mguerrerobigcheese/bigcheese-mcp-workshop/main/docs/assets/img/cloud_formation.png)
 
 Una vez en la pantalla principal de CloudFormation, hacé clic en **Create stack** y seleccioná **With new resources (standard)**.
 
-![Crear stack con nuevos recursos](assets/img/stack_1.png)
+![Crear stack con nuevos recursos](https://raw.githubusercontent.com/mguerrerobigcheese/bigcheese-mcp-workshop/main/docs/assets/img/stack_1.png)
 
 ---
 
@@ -38,7 +38,7 @@ En la pantalla *Specify template*:
 2. Hacé clic en **Choose file** y seleccioná el archivo `code-server-workshop.yaml`
 3. Hacé clic en **Next**
 
-![Subir el template code-server-workshop.yaml](assets/img/stack_2.png)
+![Subir el template code-server-workshop.yaml](https://raw.githubusercontent.com/mguerrerobigcheese/bigcheese-mcp-workshop/main/docs/assets/img/stack_2.png)
 
 > Este template usa el nombre del stack para aislar la VPC y el secreto de la contraseña. Podés lanzar varios en la misma cuenta sin conflictos.
 
@@ -56,7 +56,7 @@ En la pantalla *Specify stack details* completá los campos así:
 | Instance type | `t3.large` **← este es el único campo que debés cambiar** |
 | Instance operating system | `Ubuntu-24` (valor por defecto) |
 
-![Configurar el nombre del stack y el Instance type t3.large](assets/img/stack_3.png)
+![Configurar el nombre del stack y el Instance type t3.large](https://raw.githubusercontent.com/mguerrerobigcheese/bigcheese-mcp-workshop/main/docs/assets/img/stack_3.png)
 
 > **El Instance type por defecto es `c7i.xlarge`.** Cambialo a `t3.large` antes de continuar.
 
@@ -68,7 +68,7 @@ Hacé clic en **Next**. En la pantalla siguiente no cambies nada y volvé a hace
 
 En la pantalla de revisión final, desplazate hasta la sección **Capabilities**, marcá el checkbox y hacé clic en **Submit**.
 
-![Marcar el checkbox de IAM resources y hacer Submit](assets/img/stack_4.png)
+![Marcar el checkbox de IAM resources y hacer Submit](https://raw.githubusercontent.com/mguerrerobigcheese/bigcheese-mcp-workshop/main/docs/assets/img/stack_4.png)
 
 ---
 
