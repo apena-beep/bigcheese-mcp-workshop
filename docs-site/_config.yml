@@ -1,0 +1,31 @@
+title: Workshop MCP — BigCheese
+description: Taller práctico de Model Context Protocol sobre Amazon Bedrock
+theme: jekyll-theme-cayman
+show_downloads: false
+
+# Navegación del workshop (usar desde cada página si se desea)
+nav:
+  - title: Inicio
+    url: /
+  - title: 1. Setup (Fase 0)
+    url: /01-setup
+  - title: 2. Conceptos (L1-L3)
+    url: /02-conceptos
+  - title: 3. Tools en el servidor (L4)
+    url: /03-tools-server
+  - title: 4. Inspector (L5)
+    url: /04-inspector
+  - title: 5. Cliente MCP (L6)
+    url: /05-cliente
+  - title: 6. Resources (L7)
+    url: /06-resources-server
+  - title: 7. Cliente + Resources (L8)
+    url: /07-cliente-resources
+  - title: 8. Prompts (L9)
+    url: /08-prompts-server
+  - title: 9. Cliente + Prompts (L10)
+    url: /09-cliente-prompts
+  - title: 10. Demos (L11-L12)
+    url: /10-demos
+  - title: Troubleshooting
+    url: /troubleshooting

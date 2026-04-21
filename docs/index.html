@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BigCheese Workshop — MCP</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <a class="header-brand" href="index.html">
+    <div class="header-logo">BC</div>
+    <div>
+      <div class="header-title">BigCheese Workshop</div>
+      <div class="header-subtitle">Model Context Protocol · AWS Bedrock</div>
+    </div>
+  </a>
+  <div class="header-right">
+    <a href="https://github.com/mguerrerobigcheese/bigcheese-mcp-workshop" target="_blank">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Workshop</div>
+      <a class="sidebar-item active" href="index.html">🏠 Inicio</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Módulos</div>
+      <a class="sidebar-item" href="modulo.html?m=0"><span class="mod-badge">0</span> Entorno de Desarrollo</a>
+      <a class="sidebar-item" href="modulo.html?m=1"><span class="mod-badge">1</span> Introducción a MCP</a>
+      <a class="sidebar-item" href="modulo.html?m=2"><span class="mod-badge">2</span> Clientes MCP</a>
+      <a class="sidebar-item" href="modulo.html?m=3"><span class="mod-badge">3</span> Configuración del Proyecto</a>
+      <a class="sidebar-item" href="modulo.html?m=4"><span class="mod-badge">4</span> Herramientas en el Servidor</a>
+      <a class="sidebar-item" href="modulo.html?m=5"><span class="mod-badge">5</span> El Inspector</a>
+      <a class="sidebar-item" href="modulo.html?m=6"><span class="mod-badge">6</span> Cliente MCP</a>
+      <a class="sidebar-item" href="modulo.html?m=7"><span class="mod-badge">7</span> Recursos en el Servidor</a>
+      <a class="sidebar-item" href="modulo.html?m=8"><span class="mod-badge">8</span> Recursos desde el Cliente</a>
+      <a class="sidebar-item" href="modulo.html?m=9"><span class="mod-badge">9</span> Prompts en el Servidor</a>
+      <a class="sidebar-item" href="modulo.html?m=10"><span class="mod-badge">10</span> Prompts desde el Cliente</a>
+      <a class="sidebar-item" href="modulo.html?m=11"><span class="mod-badge">11</span> Demo: Propuesta Comercial</a>
+      <a class="sidebar-item" href="modulo.html?m=12"><span class="mod-badge">12</span> Demo: Selección de Candidatos</a>
+      <a class="sidebar-item" href="modulo.html?m=13"><span class="mod-badge">13</span> Repaso</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Recursos</div>
+      <a class="sidebar-item" href="https://github.com/mguerrerobigcheese/bigcheese-mcp-workshop/tree/main/workshop-materials" target="_blank">📁 Materiales del Workshop</a>
+      <a class="sidebar-item" href="https://github.com/mguerrerobigcheese/bigcheese-mcp-workshop/tree/main/bigcheese-mcp-starter" target="_blank">🚀 Código Starter</a>
+      <a class="sidebar-item" href="https://github.com/mguerrerobigcheese/bigcheese-mcp-workshop/tree/main/bigcheese-mcp-solution" target="_blank">✅ Solución Completa</a>
+      <a class="sidebar-item" href="https://awslabs.github.io/mcp/" target="_blank">📖 Docs MCP AWS</a>
+      <a class="sidebar-item" href="https://tinyurl.com/slack-bigcheese" target="_blank">💬 Canal de Slack</a>
+      <a class="sidebar-item" href="https://tinyurl.com/encuesta-bigcheese" target="_blank">🎟️ Vouchers AWS</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="hero">
+      <div class="hero-tag">MCP · AWS Bedrock · FinTrack S.A.</div>
+      <h1>Workshop <span>MCP</span></h1>
+      <p>Acompañá a Sebastián Morales, CTO de FinTrack S.A., mientras construís desde cero un servidor y un cliente MCP integrados en un chatbot CLI con AWS Bedrock.</p>
+    </div>
+
+    <div class="section-title">Acerca del Workshop</div>
+    <div class="info-grid" style="margin-bottom:2rem">
+      <div class="info-card">
+        <div class="info-card-icon">🏗️</div>
+        <div class="info-card-label">Protocolo</div>
+        <div class="info-card-value">Model Context Protocol</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-icon">☁️</div>
+        <div class="info-card-label">Modelo</div>
+        <div class="info-card-value">AWS Bedrock</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-icon">📦</div>
+        <div class="info-card-label">Módulos</div>
+        <div class="info-card-value">14 módulos</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-icon">🏢</div>
+        <div class="info-card-label">Caso de uso</div>
+        <div class="info-card-value">FinTrack S.A.</div>
+      </div>
+    </div>
+
+    <div class="section-title">Módulos del Workshop</div>
+    <div class="module-grid">
+      <a class="module-card" href="modulo.html?m=0">
+        <div class="module-card-header"><span class="module-num">0</span><span class="module-card-title">Entorno de Desarrollo</span></div>
+        <div class="module-card-desc">Deploy del stack CloudFormation y acceso a VS Code en el navegador.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=1">
+        <div class="module-card-header"><span class="module-num">1</span><span class="module-card-title">Introducción a MCP</span></div>
+        <div class="module-card-desc">Qué es MCP, por qué existe y qué problema resuelve. El caso de Sebastián.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=2">
+        <div class="module-card-header"><span class="module-num">2</span><span class="module-card-title">Clientes MCP</span></div>
+        <div class="module-card-desc">Qué hace el cliente y cómo orquesta la comunicación entre app y servidor.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=3">
+        <div class="module-card-header"><span class="module-num">3</span><span class="module-card-title">Configuración del Proyecto</span></div>
+        <div class="module-card-desc">Acceder al entorno y verificar que el chatbot base funciona.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=4">
+        <div class="module-card-header"><span class="module-num">4</span><span class="module-card-title">Herramientas en el Servidor</span></div>
+        <div class="module-card-desc">Crear las primeras herramientas que el modelo puede invocar.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=5">
+        <div class="module-card-header"><span class="module-num">5</span><span class="module-card-title">El Inspector</span></div>
+        <div class="module-card-desc">Probar el servidor visualmente sin necesidad de código cliente.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=6">
+        <div class="module-card-header"><span class="module-num">6</span><span class="module-card-title">Cliente MCP</span></div>
+        <div class="module-card-desc">Implementar el cliente que conecta la app con el servidor.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=7">
+        <div class="module-card-header"><span class="module-num">7</span><span class="module-card-title">Recursos en el Servidor</span></div>
+        <div class="module-card-desc">Exponer datos para que la app los use directamente, sin pasar por el modelo.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=8">
+        <div class="module-card-header"><span class="module-num">8</span><span class="module-card-title">Recursos desde el Cliente</span></div>
+        <div class="module-card-desc">Habilitar el autocompletar con @ y la inyección de contexto.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=9">
+        <div class="module-card-header"><span class="module-num">9</span><span class="module-card-title">Prompts en el Servidor</span></div>
+        <div class="module-card-desc">Empaquetar flujos de trabajo complejos en comandos simples.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=10">
+        <div class="module-card-header"><span class="module-num">10</span><span class="module-card-title">Prompts desde el Cliente</span></div>
+        <div class="module-card-desc">Implementar los comandos con / en la interfaz del chatbot.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=11">
+        <div class="module-card-header"><span class="module-num">11</span><span class="module-card-title">Demo: Propuesta Comercial</span></div>
+        <div class="module-card-desc">El modelo genera una propuesta personalizada para FinTrack en segundos.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=12">
+        <div class="module-card-header"><span class="module-num">12</span><span class="module-card-title">Demo: Selección de Candidatos</span></div>
+        <div class="module-card-desc">Preselección inteligente de CVs con shortlist ejecutivo.</div>
+      </a>
+      <a class="module-card" href="modulo.html?m=13">
+        <div class="module-card-header"><span class="module-num">13</span><span class="module-card-title">Repaso</span></div>
+        <div class="module-card-desc">Las tres primitivas, referencia rápida y próximos pasos.</div>
+      </a>
+    </div>
+
+    <div class="section-title">Empezar</div>
+    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+      <a class="mod-nav-btn primary" href="modulo.html?m=0">Comenzar el Workshop →</a>
+      <a class="mod-nav-btn" href="https://github.com/mguerrerobigcheese/bigcheese-mcp-workshop" target="_blank">Ver en GitHub</a>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Inspector UI: https://d33kk65353csoq.cloudfront.net/proxy/6274
+# Proxy API:    https://d33kk65353csoq.cloudfront.net/proxy/6277
+
+# Use the mcp dev command to start the inspector with the required arguments for the AWS workshop
+# We use the ALLOWED_ORIGINS to allow the inspector to be accessed from the code-server instance domain
+# We use the MCP_PROXY_FULL_ADDRESS to set the Inspector proxy URL and the port
+# In this workshop we are not going to use the auth token, so we set DANGEROUSLY_OMIT_AUTH=true
+# Select ALL lines from 10-13, copy and paste the command into the VS Code Server terminal to start the inspector
+
+ALLOWED_ORIGINS="http://localhost:6274,http://127.0.0.1:6274,https://d33kk65353csoq.cloudfront.net" \
+MCP_PROXY_FULL_ADDRESS="https://d33kk65353csoq.cloudfront.net/proxy/6277" \
+DANGEROUSLY_OMIT_AUTH=true \
+uv run mcp dev mcp_server.py
