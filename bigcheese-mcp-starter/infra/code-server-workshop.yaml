@@ -1,0 +1,1667 @@
+# Copyright 2023 Amazon.com and its affiliates; all rights reserved.
+# This file is Amazon Web Services Content and may not be duplicated or distributed without permission.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Introduction to Model Context Protocol on AWS
+
+Parameters:
+  CodeServerUser:
+    Type: String
+    Description: UserName for code-server
+    Default: participant
+  InstanceName:
+    Type: String
+    Description: Code-server EC2 instance name
+    Default: CodeServer
+  InstanceVolumeSize:
+    Type: Number
+    Description: Code-server EC2 instance volume size in GB
+    Default: 40
+  InstanceType:
+    Description: Code-server EC2 instance type
+    Type: String
+    Default: c7i.xlarge
+  InstanceOperatingSystem:
+    Description: Code-server EC2 operating system
+    Type: String
+    Default: Ubuntu-24
+    AllowedValues: ['AmazonLinux-2023', 'Ubuntu-22', 'Ubuntu-24']
+  HomeFolder:
+    Type: String
+    Description: Folder to open in code-server
+    Default: /workshop
+  DevServerBasePath:
+    Type: String
+    Description: Base path for the application to be added to Nginx sites-available list
+    Default: app
+  DevServerPort:
+    Type: Number
+    Description: Port for the DevServer
+    Default: 8081
+  RepoUrl:
+    Description: Remote repo URL to clone. To not clone a remote repo, leave blank
+    Type: String
+    Default: ''
+  AssetZipS3Path:
+    Description: S3 path holding the asset zip file to be copied into the home folder. To not include any assets, leave blank
+    Type: String
+    Default: ''
+  BranchZipS3Path:
+    Description: S3 path holding the branches zip file to be checked into the git repo, with each folder being a branch. The content of each folder will added as under a branch, with the folder name being used as the branch name. To leave the empty, leave blank
+    Type: String
+    Default: ''
+  FolderZipS3Path:
+    Description: S3 path holding the folder zip file, with each folder being a subfolder of the home directory. Each folder will have its own local git repo. To not include any folders, leave blank
+    Type: String
+    Default: ''
+
+Conditions:
+  IsAL2023: !Equals [!Ref InstanceOperatingSystem, 'AmazonLinux-2023']
+  IsGraviton: !Not [
+    !Equals [
+      !Select [0, !Split ['g', !Select [0, !Split ['.', !Ref InstanceType]]]],
+      !Select [0, !Split ['.', !Ref InstanceType]]
+    ]
+  ]
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Instance Configuration
+        Parameters:
+          - InstanceName
+          - InstanceVolumeSize
+          - InstanceType
+          - InstanceOperatingSystem
+      - Label:
+          default: Code-server Configuration
+        Parameters:
+          - CodeServerUser
+          - HomeFolder
+          - DevServerBasePath
+          - DevServerPort
+          - RepoUrl
+          - AssetZipS3Path
+          - BranchZipS3Path
+          - FolderZipS3Path
+    ParameterLabels:
+      CodeServerUser:
+        default: Code-server user name
+      InstanceName:
+        default: Instance name
+      InstanceVolumeSize:
+        default: Instance volume size
+      InstanceType:
+        default: Instance type
+      InstanceOperatingSystem:
+        default: Instance operating system
+      HomeFolder:
+        default: Code-server home folder
+      DevServerBasePath:
+        default: Application base path
+      DevServerPort:
+        default: Application port
+      RepoUrl:
+        default: Git repo URL
+      AssetZipS3Path:
+        default: Asset file S3 path
+      BranchZipS3Path:
+        default: Branch file S3 path
+      FolderZipS3Path:
+        default: Folder file S3 path
+
+Mappings:
+  ArmImage:
+  # aws ssm get-parameters-by-path --path "/aws/service/canonical/ubuntu/" --recursive --query "Parameters[*].Name"  > canonical-ami.txt
+  # aws ssm get-parameters-by-path --path "/aws/service/ami-amazon-linux-latest/" --recursive --query "Parameters[*].Name"  > amazon-ami.txt
+    Ubuntu-22:
+      ImageId: '{{resolve:ssm:/aws/service/canonical/ubuntu/server/jammy/stable/current/arm64/hvm/ebs-gp2/ami-id}}'
+    Ubuntu-24:
+      ImageId: '{{resolve:ssm:/aws/service/canonical/ubuntu/server/noble/stable/current/arm64/hvm/ebs-gp3/ami-id}}'
+    AmazonLinux-2023:
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
+  AmdImage:
+    Ubuntu-22:
+      ImageId: '{{resolve:ssm:/aws/service/canonical/ubuntu/server/jammy/stable/current/amd64/hvm/ebs-gp2/ami-id}}'
+    Ubuntu-24:
+      ImageId: '{{resolve:ssm:/aws/service/canonical/ubuntu/server/noble/stable/current/amd64/hvm/ebs-gp3/ami-id}}'
+    AmazonLinux-2023:
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+  AWSRegionsPrefixListID:
+  # aws ec2 describe-managed-prefix-lists  --region <REGION> | jq -r '.PrefixLists[] | select (.PrefixListName == "com.amazonaws.global.cloudfront.origin-facing") | .PrefixListId'
+    ap-northeast-1:
+      PrefixList: pl-58a04531
+    ap-northeast-2:
+      PrefixList: pl-22a6434b
+    ap-south-1:
+      PrefixList: pl-9aa247f3
+    ap-southeast-1:
+      PrefixList: pl-31a34658
+    ap-southeast-2:
+      PrefixList: pl-b8a742d1
+    ca-central-1:
+      PrefixList: pl-38a64351
+    eu-central-1:
+      PrefixList: pl-a3a144ca
+    eu-north-1:
+      PrefixList: pl-fab65393
+    eu-west-1:
+      PrefixList: pl-4fa04526
+    eu-west-2:
+      PrefixList: pl-93a247fa
+    eu-west-3:
+      PrefixList: pl-75b1541c
+    sa-east-1:
+      PrefixList: pl-5da64334
+    us-east-1:
+      PrefixList: pl-3b927c52
+    us-east-2:
+      PrefixList: pl-b6a144df
+    us-west-1:
+      PrefixList: pl-4ea04527
+    us-west-2:
+      PrefixList: pl-82a045eb
+
+Resources:
+  # ---- Networking (VPC, Subnet, IGW, Routes) ----
+  WorkshopVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${InstanceName}-${AWS::StackName}'
+
+  WorkshopInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${InstanceName}-IGW
+
+  WorkshopIGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref WorkshopVPC
+      InternetGatewayId: !Ref WorkshopInternetGateway
+
+  WorkshopPublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref WorkshopVPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub ${InstanceName}-PublicSubnet
+
+  WorkshopPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref WorkshopVPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${InstanceName}-PublicRT
+
+  WorkshopPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: WorkshopIGWAttachment
+    Properties:
+      RouteTableId: !Ref WorkshopPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref WorkshopInternetGateway
+
+  WorkshopSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref WorkshopPublicSubnet
+      RouteTableId: !Ref WorkshopPublicRouteTable
+
+  CodeServerSecret:
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W77
+            reason: The default KMS Key used by Secrets Manager is appropriate for this password which will be used to log into code-server, which has very limited permissions. In addition this secret will not be required to be shared across accounts
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Sub '${InstanceName}-${AWS::StackName}'
+      Description: Code-server user details
+      GenerateSecretString:
+        PasswordLength: 16
+        SecretStringTemplate: !Sub '{"username":"${CodeServerUser}"}'
+        GenerateStringKey: 'password'
+        ExcludePunctuation: true
+
+  SecretPlaintextLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub lambda.${AWS::URLSuffix}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AwsSecretsManager
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref CodeServerSecret
+
+  SecretPlaintextLambda:
+    Type: AWS::Lambda::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W58
+            reason: Warning incorrectly reported. The role associated with the Lambda function has the AWSLambdaBasicExecutionRole managed policy attached, which includes permission to write CloudWatch Logs. See https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSLambdaBasicExecutionRole.html
+          - id: W89
+            reason: CloudFormation custom function does not need the scaffolding of a VPC, to do so would add unnecessary complexity
+          - id: W92
+            reason: CloudFormation custom function does not need reserved concurrent executions, to do so would add unnecessary complexity
+    Properties:
+      Description: Return the value of the secret
+      Handler: index.lambda_handler
+      Runtime: python3.13
+      MemorySize: 128
+      Timeout: 10
+      Architectures:
+        - arm64
+      Role: !GetAtt SecretPlaintextLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import cfnresponse
+          import logging
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def is_valid_json(json_string):
+              logger.debug(f'Calling is_valid_jason:{json_string}')
+              try:
+                  json.loads(json_string)
+                  logger.info(f'Secret is in json format')
+                  return True
+              except json.JSONDecodeError:
+                  logger.info(f'Secret is in string format')
+                  return False
+
+          def lambda_handler(event, context):
+              logger.debug(f'event: {event}')
+              logger.debug(f'context: {context}')
+              try:
+                  if event['RequestType'] == 'Delete':
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='No action to take')
+                  else:
+                      resource_properties = event['ResourceProperties']
+                      secret_name = resource_properties['SecretArn']
+                      secrets_mgr = boto3.client('secretsmanager')
+
+                      logger.info(f'Getting secret from {secret_name}')
+
+                      secret = secrets_mgr.get_secret_value(SecretId = secret_name)
+                      logger.debug(f'secret: {secret}')
+                      secret_value = secret['SecretString']
+
+                      responseData = {}
+                      if is_valid_json(secret_value):
+                          responseData = secret_value
+                      else:
+                          responseData = {'secret': secret_value}
+                      logger.debug(f'responseData: {responseData}')
+                      logger.debug(f'type(responseData): {type(responseData)}')
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData=json.loads(responseData), reason='OK', noEcho=True)
+              except Exception as e:
+                  logger.error(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=str(e))
+
+  SecretPlaintext:
+    Type: Custom::SecretPlaintextLambda
+    Properties:
+      ServiceToken: !GetAtt SecretPlaintextLambda.Arn
+      ServiceTimeout: 15
+      SecretArn: !Ref CodeServerSecret
+
+  CodeServerSSMDoc:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Command
+      Content:
+        schemaVersion: '2.2'
+        description: Bootstrap code-server instance
+        parameters:
+          LinuxFlavor:
+            type: String
+            default: 'al2023'
+          CodeServerPassword:
+            type: String
+            default: !Ref AWS::StackId
+          CloudFrontDomain:  # ← ADD THIS
+            type: String
+            default: 'localhost'
+        # all mainSteps scripts are in in /var/lib/amazon/ssm/<instanceid>/document/orchestration/<uuid>/<StepName>/_script.sh
+        mainSteps:
+          - name: InstallCloudWatchAgent
+            action: aws:configurePackage
+            inputs:
+              name: AmazonCloudWatchAgent
+              action: Install
+          - name: ConfigureCloudWatchAgent
+            action: aws:runDocument
+            inputs:
+              documentType: SSMDocument
+              documentPath: AmazonCloudWatch-ManageAgent
+              documentParameters:
+                action: configure
+                mode: ec2
+                optionalConfigurationSource: default
+                optionalRestart: 'yes'
+          - name: InstallAptPackagesApt
+            action: aws:runShellScript
+            precondition:
+              StringEquals:
+                - '{{ LinuxFlavor }}'
+                - ubuntu
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - '#!/bin/bash'
+                - dpkg --configure -a
+                - apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -y -q apt-utils
+                - apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -y -q needrestart unattended-upgrades
+                - sed -i 's/#$nrconf{kernelhints} = -1;/$nrconf{kernelhints} = 0;/' /etc/needrestart/needrestart.conf
+                - sed -i 's/#$nrconf{verbosity} = 2;/$nrconf{verbosity} = 0;/' /etc/needrestart/needrestart.conf
+                - sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+                - echo "Apt helper packages added. Checking configuration"
+                - cat /etc/needrestart/needrestart.conf
+          - name: InstallBasePackagesDnf
+            action: aws:runShellScript
+            precondition:
+              StringEquals:
+                - '{{ LinuxFlavor }}'
+                - al2023
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - '#!/bin/bash'
+                - dnf install -y --allowerasing curl gnupg whois argon2 unzip nginx openssl
+          - name: InstallBasePackagesApt
+            action: aws:runShellScript
+            precondition:
+              StringEquals:
+                - '{{ LinuxFlavor }}'
+                - ubuntu
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - '#!/bin/bash'
+                - dpkg --configure -a
+                - apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -y -q curl gnupg whois argon2 unzip nginx openssl locales locales-all apt-transport-https ca-certificates software-properties-common python3-pip pipx nodejs npm
+          - name: AddUserDnf
+            action: aws:runShellScript
+            precondition:
+              StringEquals:
+                - '{{ LinuxFlavor }}'
+                - al2023
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - '#!/bin/bash'
+                - !Sub |
+                  echo 'Adding user: ${CodeServerUser}'
+                  adduser -c '' ${CodeServerUser}
+                  passwd -l ${CodeServerUser}
+                  echo "${CodeServerUser}:{{ CodeServerPassword }}" | chpasswd
+                  usermod -aG wheel ${CodeServerUser}
+                - echo "User added. Checking configuration"
+                - !Sub getent passwd ${CodeServerUser}
+          - name: AddUserApt
+            action: aws:runShellScript
+            precondition:
+              StringEquals:
+                - '{{ LinuxFlavor }}'
+                - ubuntu
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - '#!/bin/bash'
+                - dpkg --configure -a
+                - !Sub |
+                  if [[ "${CodeServerUser}" == "ubuntu" ]]
+                  then
+                    echo 'Using existing user: ${CodeServerUser}'
+                  else
+                    echo 'Adding user: ${CodeServerUser}'
+                    adduser --disabled-password --gecos '' ${CodeServerUser}
+                    echo "${CodeServerUser}:{{ CodeServerPassword }}" | chpasswd
+                    usermod -aG sudo ${CodeServerUser}
+                  fi
+                - !Sub |
+                  tee /etc/sudoers.d/91-vscode-user <<EOF
+                  ${CodeServerUser} ALL=(ALL) NOPASSWD:ALL
+                  EOF
+                - !Sub mkdir -p /home/${CodeServerUser} && chown -R ${CodeServerUser}:${CodeServerUser} /home/${CodeServerUser}
+                - !Sub mkdir -p /home/${CodeServerUser}/.local/bin && chown -R ${CodeServerUser}:${CodeServerUser} /home/${CodeServerUser}
+                - echo "User added. Checking configuration"
+                - !Sub getent passwd ${CodeServerUser}
+          - name: UpdateProfile
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - '#!/bin/bash'
+                - echo LANG=en_US.utf-8 >> /etc/environment
+                - echo LC_ALL=en_US.UTF-8 >> /etc/environment
+                - !Sub echo 'PATH=$PATH:/home/${CodeServerUser}/.local/bin' >> /home/${CodeServerUser}/.bashrc
+                - !Sub echo 'export PATH' >> /home/${CodeServerUser}/.bashrc
+                - !Sub echo 'export AWS_REGION=${AWS::Region}' >> /home/${CodeServerUser}/.bashrc
+                - !Sub echo 'export AWS_ACCOUNTID=${AWS::AccountId}' >> /home/${CodeServerUser}/.bashrc
+                - !Sub echo 'export NEXT_TELEMETRY_DISABLED=1' >> /home/${CodeServerUser}/.bashrc
+                - !Sub echo "export PS1='\[\033[01;32m\]\u:\[\033[01;34m\]\w\[\033[00m\]\$ '" >> /home/${CodeServerUser}/.bashrc
+                - !Sub chown -R ${CodeServerUser}:${CodeServerUser} /home/${CodeServerUser}
+          - name: InstallAWSCLI
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - '#!/bin/bash'
+                - mkdir -p /tmp
+                - curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip -o /tmp/aws-cli.zip
+                - !Sub chown -R ${CodeServerUser}:${CodeServerUser} /tmp/aws-cli.zip
+                - unzip -q -d /tmp /tmp/aws-cli.zip
+                - sudo /tmp/aws/install
+                - rm -rf /tmp/aws
+                - echo "AWS CLI installed. Checking configuration"
+                - aws --version
+          - name: InstallMCPReqs
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - '#!/bin/bash'
+                - set -e
+                - echo "Installing uv for Python package management"
+                - !Sub |
+                  # Install uv as the CodeServerUser
+                  export HOME=/home/${CodeServerUser}
+                  sudo -u ${CodeServerUser} bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+                  
+                  # The installer should put uv in ~/.cargo/bin, move it to ~/.local/bin
+                  sudo -u ${CodeServerUser} mkdir -p /home/${CodeServerUser}/.local/bin
+                  if [ -f /home/${CodeServerUser}/.cargo/bin/uv ]; then
+                    sudo -u ${CodeServerUser} mv /home/${CodeServerUser}/.cargo/bin/uv /home/${CodeServerUser}/.local/bin/
+                    sudo -u ${CodeServerUser} mv /home/${CodeServerUser}/.cargo/bin/uvx /home/${CodeServerUser}/.local/bin/
+                  fi
+                  
+                  # Create virtual environment and install packages
+                  sudo -u ${CodeServerUser} mkdir -p /home/${CodeServerUser}/.mcp
+                  cd /home/${CodeServerUser}/.mcp
+                  sudo -u ${CodeServerUser} /home/${CodeServerUser}/.local/bin/uv venv .venv
+                  sudo -u ${CodeServerUser} /home/${CodeServerUser}/.local/bin/uv pip install --python .venv boto3 python-dotenv prompt-toolkit pydantic "mcp[cli]"
+                  
+                  # Auto-activate the environment in bashrc (append, don't overwrite)
+                  echo '' >> /home/${CodeServerUser}/.bashrc
+                  echo '# Auto-activate MCP environment' >> /home/${CodeServerUser}/.bashrc
+                  echo 'if [ -f ~/.mcp/.venv/bin/activate ]; then' >> /home/${CodeServerUser}/.bashrc
+                  echo '    source ~/.mcp/.venv/bin/activate' >> /home/${CodeServerUser}/.bashrc
+                  echo 'fi' >> /home/${CodeServerUser}/.bashrc
+                  
+                  chown ${CodeServerUser}:${CodeServerUser} /home/${CodeServerUser}/.bashrc
+                - !Sub |
+                  # Fix MCP Inspector timeout issue - add timeout exports to venv activate script
+                  echo '' >> /home/${CodeServerUser}/.mcp/.venv/bin/activate
+                  echo '# MCP Inspector timeout configuration (fixes MCP error -32001)' >> /home/${CodeServerUser}/.mcp/.venv/bin/activate
+                  echo 'export MCP_SERVER_REQUEST_TIMEOUT=60000              # 60 seconds (default is 10)' >> /home/${CodeServerUser}/.mcp/.venv/bin/activate
+                  echo 'export MCP_REQUEST_MAX_TOTAL_TIMEOUT=300000          # 5 minutes' >> /home/${CodeServerUser}/.mcp/.venv/bin/activate
+                  echo 'export MCP_REQUEST_TIMEOUT_RESET_ON_PROGRESS=true    # Reset timeout on activity' >> /home/${CodeServerUser}/.mcp/.venv/bin/activate
+                  echo '' >> /home/${CodeServerUser}/.mcp/.venv/bin/activate
+                - echo "MCP requirements installed and configured for automatic activation"
+                - echo "MCP Inspector timeout increased from 10s to 60s to prevent timeout errors"
+          - name: InstallClaudeCode
+            action: aws:runShellScript
+            inputs:
+              runCommand:
+                - !Sub |
+                  sudo -u ${CodeServerUser} mkdir -p /home/${CodeServerUser}/.npm-global
+                  sudo -u ${CodeServerUser} npm config set prefix '/home/${CodeServerUser}/.npm-global'
+                  sudo -u ${CodeServerUser} npm install -g @anthropic-ai/claude-code
+                  # Create symlink in .local/bin instead of /usr/local/bin
+                  sudo -u ${CodeServerUser} mkdir -p /home/${CodeServerUser}/.local/bin
+                  sudo -u ${CodeServerUser} ln -sf /home/${CodeServerUser}/.npm-global/bin/claude /home/${CodeServerUser}/.local/bin/claude
+                  echo 'export CLAUDE_CODE_USE_BEDROCK=1' >> /home/${CodeServerUser}/.bashrc
+                  echo 'export ANTHROPIC_MODEL="us.anthropic.claude-sonnet-4-20250514-v1:0"' >> /home/${CodeServerUser}/.bashrc
+                  echo 'export CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096' >> /home/${CodeServerUser}/.bashrc
+                  echo 'export MAX_THINKING_TOKENS=1024' >> /home/${CodeServerUser}/.bashrc
+          - name: InstallGitDnf
+            action: aws:runShellScript
+            precondition:
+              StringEquals:
+                - '{{ LinuxFlavor }}'
+                - al2023
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - '#!/bin/bash'
+                - dnf install -y git
+                - !Sub sudo -u ${CodeServerUser} git config --global user.email "participant@example.com"
+                - !Sub sudo -u ${CodeServerUser} git config --global user.name "Workshop Participant"
+                - !Sub sudo -u ${CodeServerUser} git config --global init.defaultBranch "main"
+                - echo "Git installed. Checking configuration"
+                - git --version
+          - name: InstallGitApt
+            action: aws:runShellScript
+            precondition:
+              StringEquals:
+                - '{{ LinuxFlavor }}'
+                - ubuntu
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - '#!/bin/bash'
+                - dpkg --configure -a
+                - add-apt-repository ppa:git-core/ppa
+                - apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -y -q git
+                - !Sub sudo -u ${CodeServerUser} git config --global user.email "participant@example.com"
+                - !Sub sudo -u ${CodeServerUser} git config --global user.name "Workshop Participant"
+                - !Sub sudo -u ${CodeServerUser} git config --global init.defaultBranch "main"
+                - echo "Git installed. Checking configuration"
+                - git --version
+          - name: CloneRepo
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 600
+              runCommand:
+                - '#!/bin/bash'
+                - !Sub |
+                  if [[ -z "${RepoUrl}" ]]
+                  then
+                    echo "No Repo"
+                  else
+                    mkdir -p ${HomeFolder} && chown -R ${CodeServerUser}:${CodeServerUser} ${HomeFolder}
+                    sudo -u ${CodeServerUser} git clone ${RepoUrl} ${HomeFolder}
+                    echo "Repo ${RepoUrl} cloned. Checking configuration"
+                    ls -la ${HomeFolder}
+                    sudo -u ${CodeServerUser} git -C ${HomeFolder} remote -v
+                  fi
+          - name: DownloadAssets
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 600
+              runCommand:
+                - '#!/bin/bash'
+                - !Sub |
+                  if [[ -z "${AssetZipS3Path}" ]]
+                  then
+                    echo "No assets"
+                  else
+                    mkdir -p ${HomeFolder} && chown -R ${CodeServerUser}:${CodeServerUser} ${HomeFolder}
+                    mkdir -p /tmp
+                    aws s3 cp s3://${AssetZipS3Path} /tmp/asset.zip
+                    chown -R ${CodeServerUser}:${CodeServerUser} /tmp/asset.zip
+                    unzip -o /tmp/asset.zip -d ${HomeFolder}
+                    chown -R ${CodeServerUser}:${CodeServerUser} ${HomeFolder}
+                    if  [[ -d ${HomeFolder}/.git ]] # Indicates that a repo has been cloned
+                    then
+                      sudo -u ${CodeServerUser} git -C ${HomeFolder} add .
+                      sudo -u ${CodeServerUser} git -C ${HomeFolder} commit -m 'Workshop commit'
+                    else
+                      sudo -u ${CodeServerUser} git -C ${HomeFolder} init
+                      sudo -u ${CodeServerUser} git -C ${HomeFolder} add .
+                      sudo -u ${CodeServerUser} git -C ${HomeFolder} commit -m 'Initial commit'
+                    fi
+                    echo "Assets downloaded. Checking configuration: ${HomeFolder}"
+                    ls -la ${HomeFolder}
+                    sudo -u ${CodeServerUser} git -C ${HomeFolder} branch
+                  fi
+          - name: DownloadFolders
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 600
+              runCommand:
+                - '#!/bin/bash'
+                - !Sub |
+                  if [[ -z "${FolderZipS3Path}" ]]
+                  then
+                    echo "No folders"
+                  else
+                    rm -rf /tmp/folder
+                    mkdir -p /tmp/folder && chown -R ${CodeServerUser}:${CodeServerUser} /tmp/folder
+                    aws s3 cp s3://${FolderZipS3Path} /tmp/asset-folder.zip
+                    chown -R ${CodeServerUser}:${CodeServerUser} /tmp/asset-folder.zip
+                    unzip -o /tmp/asset-folder.zip -d /tmp/folder
+                    chown -R ${CodeServerUser}:${CodeServerUser} /tmp/folder
+                    mkdir -p ${HomeFolder} && chown -R ${CodeServerUser}:${CodeServerUser} ${HomeFolder}
+                    cd "${HomeFolder}" && cd ..
+                    if [[ $(pwd) ==  "/" ]]
+                    then
+                      targetRootFolder=""
+                    else
+                      targetRootFolder=$(pwd)
+                      chown -R ${CodeServerUser}:${CodeServerUser} .
+                    fi
+                    find "/tmp/folder" -maxdepth 1 -mindepth 1 -type d | while read sourceFolder; do
+                      folder="$(basename $sourceFolder)"
+                      echo "Processing folder: $folder"
+                      targetFolder=$targetRootFolder/$folder
+                      if [[ $targetRootFolder == "" ]]
+                      then
+                        mv $sourceFolder /
+                      else
+                        mv $sourceFolder $targetRootFolder
+                      fi
+                      chown -R ${CodeServerUser}:${CodeServerUser} $targetFolder
+                      sudo -u ${CodeServerUser} git -C $targetFolder init
+                      sudo -u ${CodeServerUser} git -C $targetFolder add .
+                      sudo -u ${CodeServerUser} git -C $targetFolder commit -m "Initial commit"
+                      echo "Folder downloaded. Checking configuration: $targetFolder"
+                      ls -la $targetFolder
+                    done
+                    rm -rf /tmp/folder
+                  fi
+          - name: DownloadBranches
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 600
+              runCommand:
+                - '#!/bin/bash'
+                - !Sub |
+                  if [[ -z "${BranchZipS3Path}" ]]
+                  then
+                    echo "No branches"
+                  else
+                    rm -rf /tmp/branch
+                    rm -rf /tmp/git
+                    mkdir -p /tmp/branch && chown -R ${CodeServerUser}:${CodeServerUser} /tmp/branch
+                    mkdir -p /tmp/git && chown -R ${CodeServerUser}:${CodeServerUser} /tmp/git
+                    aws s3 cp s3://${BranchZipS3Path} /tmp/asset-branch.zip
+                    chown -R ${CodeServerUser}:${CodeServerUser} /tmp/asset-branch.zip
+                    unzip -o /tmp/asset-branch.zip -d /tmp/branch
+                    chown -R ${CodeServerUser}:${CodeServerUser} /tmp/branch
+                    mkdir -p ${HomeFolder} && chown -R ${CodeServerUser}:${CodeServerUser} ${HomeFolder}
+                    sudo -u ${CodeServerUser} git -C ${HomeFolder} init
+                    mv ${HomeFolder}/.git /tmp/git
+                    rm -rf ${HomeFolder}
+                    mkdir -p ${HomeFolder} && chown -R ${CodeServerUser}:${CodeServerUser} ${HomeFolder}
+                    mv /tmp/git/.git ${HomeFolder}
+                    find /tmp/branch -maxdepth 1 -mindepth 1 -type d | while read sourceFolder; do
+                      branch="$(basename $sourceFolder)"
+                      echo "Processing branch: $branch"
+                      sudo -u ${CodeServerUser} git -C ${HomeFolder} checkout -b $branch 2>&1
+                      cp -a $sourceFolder/. ${HomeFolder}
+                      sudo -u ${CodeServerUser} git -C ${HomeFolder} add .
+                      sudo -u ${CodeServerUser} git -C ${HomeFolder} commit -m "Initial commit $branch"
+                      mv ${HomeFolder}/.git /tmp/git
+                      rm -rf ${HomeFolder}
+                      mkdir ${HomeFolder} && chown -R ${CodeServerUser}:${CodeServerUser} ${HomeFolder}
+                      mv /tmp/git/.git ${HomeFolder}
+                    done
+                    sudo -u ${CodeServerUser} git -C ${HomeFolder} checkout main 2>&1
+                    sudo -u ${CodeServerUser} git -C ${HomeFolder} restore .
+                    rm -rf /tmp/branch
+                    rm -rf /tmp/git
+                    echo "Branches downloaded. Checking configuration: $HomeFolder"
+                    sudo -u ${CodeServerUser} git -C ${HomeFolder} branch
+                    ls -la ${HomeFolder}
+                  fi
+          - name: SetupMCPInspectorSimple
+            action: aws:runShellScript
+            inputs:
+              runCommand:
+                - '#!/bin/bash'
+                - !Sub |
+                  # Simple MCP Inspector setup for workshops
+                  
+                  # Ensure HomeFolder exists and has correct permissions
+                  mkdir -p ${HomeFolder} && chown -R ${CodeServerUser}:${CodeServerUser} ${HomeFolder}
+                  
+                  # Create the text file in HomeFolder
+                  cat > ${HomeFolder}/mcp-inspector.txt <<'EOF'
+                  # Inspector UI: https://{{ CloudFrontDomain }}/proxy/6274
+                  # Proxy API:    https://{{ CloudFrontDomain }}/proxy/6277
+                  
+                  # Use the mcp dev command to start the inspector with the required arguments for the AWS workshop
+                  # We use the ALLOWED_ORIGINS to allow the inspector to be accessed from the code-server instance domain
+                  # We use the MCP_PROXY_FULL_ADDRESS to set the Inspector proxy URL and the port
+                  # In this workshop we are not going to use the auth token, so we set DANGEROUSLY_OMIT_AUTH=true
+                  # Select ALL lines from 10-13, copy and paste the command into the VS Code Server terminal to start the inspector
+
+                  ALLOWED_ORIGINS="http://localhost:6274,http://127.0.0.1:6274,https://{{ CloudFrontDomain }}" \
+                  MCP_PROXY_FULL_ADDRESS="https://{{ CloudFrontDomain }}/proxy/6277" \
+                  DANGEROUSLY_OMIT_AUTH=true \
+                  uv run mcp dev mcp_server.py
+                  EOF
+                  
+                  # Set permissions
+                  chown ${CodeServerUser}:${CodeServerUser} ${HomeFolder}/mcp-inspector.txt
+          - name: ConfigureCodeServer
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 600
+              runCommand:
+                - '#!/bin/bash'
+                - !Sub export HOME=/home/${CodeServerUser}
+                - curl -fsSL https://code-server.dev/install.sh | bash -s -- 2>&1
+                - !Sub systemctl enable --now code-server@${CodeServerUser} 2>&1
+                # FIXED: Use proper escaping for nginx variables
+                - |
+                  cat > /etc/nginx/conf.d/code-server.conf <<'NGINXEOF'
+                  # Upstream configuration for better connection management
+                  upstream code_server {
+                      server 127.0.0.1:8080;
+                      keepalive 16;
+                      keepalive_timeout 60s;
+                  }
+
+                  upstream app_server {
+                      server 127.0.0.1:8081;
+                      keepalive 16;
+                      keepalive_timeout 60s;
+                  }
+
+                  upstream mcp_inspector {
+                      server 127.0.0.1:6274;
+                      keepalive 16;
+                      keepalive_timeout 60s;
+                  }
+
+                  upstream mcp_proxy {
+                      server 127.0.0.1:6277;
+                      keepalive 16;
+                      keepalive_timeout 60s;
+                  }
+
+                  map $http_upgrade $connection_upgrade {
+                      default upgrade;
+                      '' close;
+                  }
+
+                  server {
+                      listen 80;
+                      listen [::]:80;
+                      server_name *.cloudfront.net;
+                      
+                      # Global timeout settings
+                      keepalive_timeout 300s;
+                      client_body_timeout 300s;
+                      client_header_timeout 300s;
+                      send_timeout 300s;
+                      
+                      # Security headers
+                      add_header X-Frame-Options "SAMEORIGIN" always;
+                      add_header X-Content-Type-Options "nosniff" always;
+                      add_header X-XSS-Protection "1; mode=block" always;
+                      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+                      add_header Content-Security-Policy "upgrade-insecure-requests" always;
+                      
+                      location / {
+                          proxy_pass http://code_server/;
+                          proxy_http_version 1.1;
+                          
+                          # WebSocket support
+                          proxy_set_header Host $host;
+                          proxy_set_header Upgrade $http_upgrade;
+                          proxy_set_header Connection $connection_upgrade;
+                          proxy_set_header Accept-Encoding gzip;
+                          
+                          # Timeouts
+                          proxy_connect_timeout 75s;      # TCP limitation
+                          proxy_read_timeout 86400s;      # 24 hours
+                          proxy_send_timeout 86400s;
+                          
+                          # Disable caching for WebSocket
+                          proxy_cache_bypass $http_upgrade;
+                          proxy_no_cache $http_upgrade;
+                      }
+                      
+                      location /app {
+                          proxy_pass http://app_server/app;
+                          proxy_http_version 1.1;
+                          
+                          # WebSocket support
+                          proxy_set_header Host $host;
+                          proxy_set_header Upgrade $http_upgrade;
+                          proxy_set_header Connection $connection_upgrade;
+                          proxy_set_header Accept-Encoding gzip;
+                          
+                          # Timeouts
+                          proxy_connect_timeout 75s;
+                          proxy_read_timeout 86400s;
+                          proxy_send_timeout 86400s;
+                          
+                          # Disable caching for WebSocket
+                          proxy_cache_bypass $http_upgrade;
+                          proxy_no_cache $http_upgrade;
+                      }
+                      
+                      # MCP Inspector - redirect without trailing slash
+                      location = /mcp-inspector {
+                          return 301 /mcp-inspector/;
+                      }
+                      
+                      # MCP Inspector UI on port 6274
+                      location /mcp-inspector/ {
+                          proxy_pass http://mcp_inspector/;
+                          proxy_http_version 1.1;
+                          
+                          proxy_set_header Host $host;
+                          proxy_set_header X-Real-IP $remote_addr;
+                          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                          proxy_set_header X-Forwarded-Proto https;  # Force HTTPS
+                          
+                          # SSE support (NOT WebSocket for MCP Inspector UI)
+                          proxy_set_header Connection "";  # Empty for SSE
+                          
+                          # Critical: Disable buffering for SSE
+                          proxy_buffering off;
+                          proxy_cache off;
+                          proxy_set_header X-Accel-Buffering "no";
+                          
+                          # SSE-specific headers
+                          proxy_set_header Cache-Control 'no-cache';
+                          
+                          # Handle the sessionId properly
+                          proxy_set_header X-Session-ID $arg_sessionId;
+                          
+                          # Timeouts
+                          proxy_connect_timeout 75s;
+                          proxy_read_timeout 86400s;
+                          proxy_send_timeout 86400s;
+                          
+                          # Rewrite asset paths and proxy URLs - KEEP THE ORIGINAL PATTERN
+                          proxy_set_header Accept-Encoding "";  # Disable compression for sub_filter
+                          sub_filter_types text/html application/javascript text/javascript application/json text/plain;
+                          sub_filter 'href="/' 'href="/mcp-inspector/';
+                          sub_filter 'src="/' 'src="/mcp-inspector/';
+                          # Use the generic proxy pattern like the original
+                          sub_filter 'http://localhost:6277' 'https://$host/proxy/6277';
+                          sub_filter 'ws://localhost:6277' 'https://$host/proxy/6277';  # Convert ws to https for SSE
+                          sub_filter '://localhost:6277' '://$host/proxy/6277';  # Catch any protocol
+                          sub_filter 'localhost:6277' '$host/proxy/6277';  # Catch without protocol
+                          sub_filter ':6277' '/proxy/6277';  # Most generic catch
+                          sub_filter_once off;
+                      }
+                      
+                      # Handle MCP Inspector static assets
+                      location ~ ^/assets/(.*)$ {
+                          proxy_pass http://mcp_inspector/assets/$1;
+                          proxy_http_version 1.1;
+                          proxy_set_header Host $host;
+                          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                          proxy_buffering off;
+                          add_header Cache-Control "public, max-age=31536000";
+                          
+                          # Timeouts for static assets (shorter is fine)
+                          proxy_connect_timeout 75s;
+                          proxy_read_timeout 300s;
+                          proxy_send_timeout 300s;
+                      }
+                      
+                      location = /mcp.svg {
+                          proxy_pass http://mcp_inspector/mcp.svg;
+                          proxy_http_version 1.1;
+                          proxy_set_header Host $host;
+                          proxy_buffering off;
+                          add_header Cache-Control "public, max-age=31536000";
+                          
+                          # Timeouts for static assets
+                          proxy_connect_timeout 75s;
+                          proxy_read_timeout 300s;
+                          proxy_send_timeout 300s;
+                      }
+                      
+                      # BETTER FIX: Proxy misrouted requests directly instead of redirecting
+                      location ~ ^/message {
+                          # Proxy directly to port 6277 to avoid redirect issues
+                          proxy_pass http://mcp_proxy$request_uri;
+                          proxy_http_version 1.1;
+                          
+                          # Same headers as the generic proxy
+                          proxy_set_header Host localhost:6277;
+                          proxy_set_header X-Real-IP $remote_addr;
+                          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                          proxy_set_header X-Forwarded-Proto https;
+                          
+                          # SSE configuration for message endpoint
+                          proxy_set_header Connection "";
+                          proxy_buffering off;
+                          proxy_cache off;
+                          proxy_set_header X-Accel-Buffering "no";
+                          proxy_set_header Cache-Control 'no-cache';
+                          
+                          # Timeouts
+                          proxy_connect_timeout 75s;
+                          proxy_read_timeout 86400s;
+                          proxy_send_timeout 86400s;
+                      }
+                      
+                      # Proxy other misrouted MCP endpoints
+                      location ~ ^/(stdio|health|config|sse) {
+                          proxy_pass http://mcp_proxy$request_uri;
+                          proxy_http_version 1.1;
+                          
+                          proxy_set_header Host localhost:6277;
+                          proxy_set_header X-Real-IP $remote_addr;
+                          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                          proxy_set_header X-Forwarded-Proto https;
+                          
+                          # SSE configuration
+                          proxy_set_header Connection "";
+                          proxy_buffering off;
+                          proxy_cache off;
+                          proxy_set_header X-Accel-Buffering "no";
+                          proxy_set_header Cache-Control 'no-cache';
+                          
+                          # Timeouts
+                          proxy_connect_timeout 75s;
+                          proxy_read_timeout 86400s;
+                          proxy_send_timeout 86400s;
+                      }
+                      
+                      # Generic proxy handler for /proxy/PORT/path pattern
+                      # This handles MCP Inspector proxy (6277) and any other services
+                      location ~ ^/proxy/([0-9]+)(/.*)?$ {
+                          set $port $1;
+                          set $path $2;
+                          
+                          # Default path to / if empty
+                          if ($path = '') {
+                              set $path /;
+                          }
+                          
+                          # IMPORTANT: Use 127.0.0.1 instead of localhost
+                          proxy_pass http://127.0.0.1:$port$path$is_args$args;
+                          
+                          proxy_http_version 1.1;
+                          
+                          # Headers that work for both SSE and WebSocket
+                          proxy_set_header Host localhost:$port;
+                          proxy_set_header X-Real-IP $remote_addr;
+                          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                          proxy_set_header X-Forwarded-Proto https;  # Force HTTPS
+                          
+                          # For port 6277 (MCP Inspector proxy), use SSE configuration
+                          set $conn_header $connection_upgrade;
+                          if ($port = "6277") {
+                              set $conn_header "";  # Empty for SSE
+                          }
+                          
+                          # WebSocket upgrade headers (only used if client requests upgrade)
+                          proxy_set_header Upgrade $http_upgrade;
+                          proxy_set_header Connection $conn_header;
+                          
+                          # Remove CloudFront headers that might interfere
+                          proxy_hide_header X-Amz-Cf-Id;
+                          proxy_hide_header X-Amz-Cf-Pop;
+                          proxy_hide_header Via;
+                          
+                          # Disable buffering for real-time connections
+                          proxy_buffering off;
+                          proxy_cache off;
+                          proxy_set_header X-Accel-Buffering "no";
+                          
+                          # Prevent caching
+                          add_header Cache-Control "no-cache, no-store, must-revalidate";
+                          add_header Pragma "no-cache";
+                          add_header Expires "0";
+                          
+                          # Increase timeouts for persistent connections
+                          proxy_connect_timeout 75s;      # Fixed: TCP limitation (was 86400s)
+                          proxy_send_timeout 86400s;
+                          proxy_read_timeout 86400s;
+                          
+                          # Origin header
+                          proxy_set_header Origin "";
+                      }
+                  }
+                  NGINXEOF
+                - !Sub mkdir -p /home/${CodeServerUser}/.config/code-server
+                - !Sub |
+                  tee /home/${CodeServerUser}/.config/code-server/config.yaml <<EOF
+                  cert: false
+                  auth: password
+                  hashed-password: "$(echo -n {{ CodeServerPassword }} | argon2 $(openssl rand -base64 12) -e)"
+                  EOF
+                - !Sub mkdir -p /home/${CodeServerUser}/.local/share/code-server/User/
+                - !Sub touch /home/${CodeServerUser}/.hushlogin
+                - !Sub mkdir -p ${HomeFolder} && chown -R ${CodeServerUser}:${CodeServerUser} ${HomeFolder}
+                - !Sub |
+                  tee /home/${CodeServerUser}/.local/share/code-server/User/settings.json <<EOF
+                  {
+                    "extensions.autoUpdate": false,
+                    "extensions.autoCheckUpdates": false,
+                    "telemetry.telemetryLevel": "off",
+                    "security.workspace.trust.startupPrompt": "never",
+                    "security.workspace.trust.enabled": false,
+                    "security.workspace.trust.banner": "never",
+                    "security.workspace.trust.emptyWindow": false,
+                    "auto-run-command.rules": [
+                      {
+                        "command": "workbench.action.terminal.new"
+                      }
+                    ]
+                  }
+                  EOF
+                - !Sub chown -R ${CodeServerUser}:${CodeServerUser} /home/${CodeServerUser}
+                - !Sub systemctl restart code-server@${CodeServerUser}
+                - systemctl enable nginx
+                - systemctl restart nginx
+                #- !Sub sudo -u ${CodeServerUser} --login code-server --install-extension AmazonWebServices.aws-toolkit-vscode --force
+                - !Sub sudo -u ${CodeServerUser} --login code-server --install-extension ms-vscode.live-server --force
+                - !Sub sudo -u ${CodeServerUser} --login code-server --install-extension synedra.auto-run-command --force
+                - !Sub chown -R ${CodeServerUser}:${CodeServerUser} /home/${CodeServerUser}
+                - echo "Nginx installed. Checking configuration"
+                - nginx -t 2>&1
+                - systemctl status nginx
+                - echo "CodeServer installed. Checking configuration"
+                - code-server -v
+                - !Sub systemctl status code-server@${CodeServerUser}
+# Install optional packages here - any of these blocks can be deleted if that software is not required for the workshop
+# Install Workshop specific packages here
+
+  SSMDocLambdaRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: The Amazon EC2 ssm:*CommandInvocation API actions do not support resource-level permissions, so you cannot control which individual resources users can view in the console. Therefore, the * wildcard is necessary in the Resource element. See https://docs.aws.amazon.com/service-authorization/latest/reference/list_awssystemsmanager.html
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub lambda.${AWS::URLSuffix}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SSMDocOnEC2
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:SendCommand
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${CodeServerSSMDoc}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/AmazonCloudWatch-ManageAgent
+                  - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${CodeServerInstance}
+              - Effect: Allow
+                Action:
+                  - ssm:ListCommandInvocations
+                  - ssm:GetCommandInvocation
+                Resource: '*'
+
+  RunSSMDocLambda:
+    Type: AWS::Lambda::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W58
+            reason: Warning incorrectly reported. The role associated with the Lambda function has the AWSLambdaBasicExecutionRole managed policy attached, which includes permission to write CloudWatch Logs. See https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSLambdaBasicExecutionRole.html
+          - id: W89
+            reason: CloudFormation custom function does not need the scaffolding of a VPC, to do so would add unnecessary complexity
+          - id: W92
+            reason: CloudFormation custom function does not need reserved concurrent executions, to do so would add unnecessary complexity
+    Properties:
+      Description: Run SSM document on EC2 instance
+      Handler: index.lambda_handler
+      Runtime: python3.13
+      MemorySize: 128
+      Timeout: 600
+      Environment:
+        Variables:
+          RetrySleep: 2900
+          AbortTimeRemaining: 3200
+      Architectures:
+        - arm64
+      Role: !GetAtt SSMDocLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import logging
+          import time
+          import os
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              logger.debug(f'event: {event}')
+              logger.debug(f'context: {context}')
+
+              if event['RequestType'] != 'Create':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='No action to take')
+              else:
+                  sleep_ms = int(os.environ.get('RetrySleep'))
+                  abort_time_remaining_ms = int(os.environ.get('AbortTimeRemaining'))
+                  resource_properties = event['ResourceProperties']
+                  instance_id = resource_properties['InstanceId']
+                  document_name = resource_properties['DocumentName']
+                  cloudwatch_log_group_name = resource_properties['CloudWatchLogGroupName']
+
+                  logger.info(f'Running SSM Document {document_name} on EC2 instance {instance_id}. Logging to {cloudwatch_log_group_name}')
+
+                  del resource_properties['ServiceToken']
+                  if 'ServiceTimeout' in resource_properties:
+                      del resource_properties['ServiceTimeout']
+                  del resource_properties['InstanceId']
+                  del resource_properties['DocumentName']
+                  del resource_properties['CloudWatchLogGroupName']
+                  if 'PhysicalResourceId' in resource_properties:
+                      del resource_properties['PhysicalResourceId']
+
+                  logger.debug(f'resource_properties filtered: {resource_properties}')
+
+                  parameters = {}
+                  for key, value in resource_properties.items():
+                      parameters[key] = [value]
+
+                  logger.debug(f'parameters: {parameters}')
+
+                  retry = True
+                  attempt_no = 0
+                  time_remaining_ms = context.get_remaining_time_in_millis()
+
+                  ssm = boto3.client('ssm')
+
+                  while (retry == True):
+                      attempt_no += 1
+                      logger.info(f'Attempt: {attempt_no}. Time Remaining: {time_remaining_ms/1000}s')
+                      try:
+                          response = ssm.send_command(
+                              InstanceIds = [instance_id],
+                              DocumentName = document_name,
+                              CloudWatchOutputConfig = {'CloudWatchLogGroupName': cloudwatch_log_group_name, 'CloudWatchOutputEnabled': True},
+                              Parameters = parameters
+                          )
+                          logger.debug(f'response: {response}')
+                          command_id = response['Command']['CommandId']
+                          responseData = {'CommandId': command_id}
+                          cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, reason='OK')
+                          retry = False
+
+                      except ssm.exceptions.InvalidInstanceId as e:
+                          time_remaining_ms = context.get_remaining_time_in_millis()
+                          if (time_remaining_ms > abort_time_remaining_ms):
+                              logger.info(f'Instance {instance_id} not ready. Sleeping: {sleep_ms/1000}s')
+                              time.sleep(sleep_ms/1000)
+                              retry = True
+                          else:
+                              logger.info(f'Instance {instance_id} not ready, timed out. Time remaining {time_remaining_ms/1000}s < Abort time remaining {abort_time_remaining_ms/1000}s')
+                              logger.error(e, exc_info=True)
+                              cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason='Timed out. Time remaining: ' + str(time_remaining_ms/1000) + 's < Abort time remaining: ' + str(abort_time_remaining_ms/1000) + 's')
+                              retry = False
+
+                      except Exception as e:
+                          logger.error(e, exc_info=True)
+                          cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=str(e))
+                          retry = False
+
+  RunCodeServerSSMDoc:
+    Type: Custom::RunSSMDocLambda
+    Properties:
+      ServiceToken: !GetAtt RunSSMDocLambda.Arn
+      ServiceTimeout: 305
+      InstanceId: !Ref CodeServerInstance
+      DocumentName: !Ref CodeServerSSMDoc
+      CloudWatchLogGroupName: !Sub /aws/ssm/${CodeServerSSMDoc}
+      CodeServerPassword: !GetAtt SecretPlaintext.password
+      LinuxFlavor: !If [IsAL2023, 'al2023', 'ubuntu']
+      CloudFrontDomain: !GetAtt CloudFrontDistribution.DomainName
+
+  CodeServerInstanceBootstrapRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - !Sub ec2.${AWS::URLSuffix}
+                - !Sub ssm.${AWS::URLSuffix}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonBedrockFullAccess
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonQDeveloperAccess
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/ReadOnlyAccess
+
+
+  CodeServerInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref CodeServerInstanceBootstrapRole
+
+  CodeServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !If
+        - IsGraviton
+        - !FindInMap [ArmImage, !Ref InstanceOperatingSystem, ImageId]
+        - !FindInMap [AmdImage, !Ref InstanceOperatingSystem, ImageId]
+      InstanceType: !Ref InstanceType
+      BlockDeviceMappings:
+        - DeviceName: !If [IsAL2023, /dev/xvda, /dev/sda1]
+          Ebs:
+            VolumeSize: !Ref InstanceVolumeSize
+            VolumeType: gp3
+            DeleteOnTermination: true
+            Encrypted: true
+      Monitoring: true
+      SubnetId: !Ref WorkshopPublicSubnet
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      IamInstanceProfile: !Ref CodeServerInstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #cloud-config
+          hostname: ${InstanceName}
+          runcmd:
+            - mkdir -p ${HomeFolder} && chown -R ${CodeServerUser}:${CodeServerUser} ${HomeFolder}
+      Tags:
+      - Key: Name
+        Value: !Ref InstanceName
+
+  CodeServerInstanceCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        DefaultTTL: 86400
+        MaxTTL: 31536000
+        MinTTL: 1
+        Name: !Sub
+        - ${InstanceName}-${RandomGUID}
+        - RandomGUID: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId ]]]]
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: all
+          EnableAcceptEncodingGzip: False
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers:
+              - Accept-Charset
+              - Authorization
+              - Origin
+              - Accept
+              - Referer
+              - Host
+              - Accept-Language
+              - Accept-Encoding
+              - Accept-Datetime
+          QueryStringsConfig:
+            QueryStringBehavior: all
+
+  CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W10
+              reason: CloudFront Distribution access logging would require setup of an S3 bucket and changes in IAM, which add unnecessary complexity to the template
+            - id: W70
+              reason: Workshop Studio does not include a domain that can be used to provision a certificate, so it is not possible to setup TLS. See PFR EE-6016
+      Properties:
+        DistributionConfig:
+          Enabled: True
+          HttpVersion: http2and3
+          CacheBehaviors:
+            # Specific behavior for MCP Inspector WebSocket (must be first)
+            - AllowedMethods:
+                - GET
+                - HEAD
+                - OPTIONS
+                - PUT
+                - PATCH
+                - POST
+                - DELETE
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # CachingDisabled
+              OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3 # AllViewer
+              TargetOriginId: !Sub CloudFront-${AWS::StackName}
+              ViewerProtocolPolicy: allow-all
+              PathPattern: '/proxy/6277/*'  # Specific to MCP Inspector WebSocket
+              Compress: False  # Important: Don't compress WebSocket traffic
+            # General proxy behavior (existing)
+            - AllowedMethods:
+                - GET
+                - HEAD
+                - OPTIONS
+                - PUT
+                - PATCH
+                - POST
+                - DELETE
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html#managed-cache-policy-caching-disabled
+              Compress: False
+              OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3 # Managed-AllViewer - see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html#:~:text=When%20using%20AWS,47e4%2Db989%2D5492eafa07d3
+              TargetOriginId: !Sub CloudFront-${AWS::StackName}
+              ViewerProtocolPolicy: allow-all
+              PathPattern: '/proxy/*'
+          DefaultCacheBehavior:
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - PUT
+              - PATCH
+              - POST
+              - DELETE
+            CachePolicyId: !Ref CodeServerInstanceCachePolicy
+            OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3 # Managed-AllViewer - see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html#:~:text=When%20using%20AWS,47e4%2Db989%2D5492eafa07d3
+            TargetOriginId: !Sub CloudFront-${AWS::StackName}
+            ViewerProtocolPolicy: allow-all
+          Origins:
+            - DomainName: !GetAtt CodeServerInstance.PublicDnsName
+              Id: !Sub CloudFront-${AWS::StackName}
+              CustomOriginConfig:
+                OriginProtocolPolicy: http-only
+                OriginReadTimeout: 60
+                OriginKeepaliveTimeout: 60
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: F1000
+            reason: All outbound traffic should be allowed from this instance. The EC2 instance is provisioned in the workshop VPC with a permissive egress rule for software installation
+    Properties:
+      GroupDescription: Security Group for code-server - only allow CloudFront ingress
+      VpcId: !Ref WorkshopVPC
+      SecurityGroupIngress:
+        - Description: Allow HTTP from com.amazonaws.global.cloudfront.origin-facing
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourcePrefixListId: !FindInMap [AWSRegionsPrefixListID, !Ref 'AWS::Region', PrefixList]
+
+  CodeServerHealthCheckLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub lambda.${AWS::URLSuffix}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  CodeServerHealthCheckLambda:
+    Type: AWS::Lambda::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W58
+            reason: Warning incorrectly reported. The role associated with the Lambda function has the AWSLambdaBasicExecutionRole managed policy attached, which includes permission to write CloudWatch Logs. See https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSLambdaBasicExecutionRole.html
+          - id: W89
+            reason: CloudFormation custom function does not need the scaffolding of a VPC, to do so would add unnecessary complexity
+          - id: W92
+            reason: CloudFormation custom function does not need reserved concurrent executions, to do so would add unnecessary complexity
+    Properties:
+      Description: Run health check on code-server instance
+      Handler: index.lambda_handler
+      Runtime: python3.13
+      MemorySize: 128
+      Timeout: 600
+      Environment:
+        Variables:
+          RetrySleep: 2900
+          AbortTimeRemaining: 5000
+      Architectures:
+        - arm64
+      Role: !GetAtt CodeServerHealthCheckLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import cfnresponse
+          import logging
+          import time
+          import os
+          import http.client
+          from urllib.parse import urlparse
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def healthURLOk(url):
+              try:
+                  logger.debug(f'url: {url}')
+                  parsed_url = urlparse(url)
+                  if parsed_url.scheme == 'https':
+                      logger.debug(f'Trying https: {parsed_url.netloc}')
+                      conn = http.client.HTTPSConnection(parsed_url.netloc)
+                  else:
+                      logger.debug(f'Trying http: {parsed_url.netloc}')
+                      conn = http.client.HTTPConnection(parsed_url.netloc)
+                  
+                  conn.request("GET", parsed_url.path or "/")
+                  response = conn.getresponse()
+                  logger.debug(f'response.status: {response.status}')
+                  
+                  # Just check for successful HTTP status codes (2xx or 3xx)
+                  if 200 <= response.status < 400:
+                      logger.info(f'Health check OK. Status: {response.status}')
+                      return True
+                  else:
+                      logger.info(f'Health check failed. Status: {response.status}')
+                      return False
+
+              except http.client.HTTPException as e:
+                  logger.error(e, exc_info=True)
+                  logger.error(f'Health check failed: HTTP Exception')
+                  return False
+              except Exception as e:
+                  logger.error(e, exc_info=True)
+                  logger.info(f'Health check failed: General error')
+                  return False
+              finally:
+                  if 'conn' in locals():
+                      conn.close()
+
+          def lambda_handler(event, context):
+              logger.debug(f'event: {event}')
+              logger.debug(f'context: {context}')
+              try:
+                  if event['RequestType'] != 'Create':
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='No action to take')
+                  else:
+                      sleep_ms = int(os.environ.get('RetrySleep'))
+                      abort_time_remaining_ms = int(os.environ.get('AbortTimeRemaining'))
+                      resource_properties = event['ResourceProperties']
+                      url = resource_properties['Url']
+
+                      logger.info(f'Testing url: {url}')
+
+                      time_remaining_ms = context.get_remaining_time_in_millis()
+                      attempt_no = 0
+                      health_check = False
+                      while (attempt_no == 0 or (time_remaining_ms > abort_time_remaining_ms and not health_check)):
+                          attempt_no += 1
+                          logger.info(f'Attempt: {attempt_no}. Time Remaining: {time_remaining_ms/1000}s')
+                          health_check = healthURLOk(url)
+                          if not health_check:
+                              logger.debug(f'Health check failed. Sleeping: {sleep_ms/1000}s')
+                              time.sleep(sleep_ms/1000)
+                          time_remaining_ms = context.get_remaining_time_in_millis()
+                      
+                      if health_check:
+                          logger.info(f'Health check successful. Attempts: {attempt_no}. Time Remaining: {time_remaining_ms/1000}s')
+                          cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='Code-server healthcheck successful')
+                      else:
+                          logger.info(f'Health check failed. Timed out. Attempts: {attempt_no}. Time remaining {time_remaining_ms/1000}s < Abort time remaining {abort_time_remaining_ms/1000}s')
+                          cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason='Code-server healthcheck failed. Timed out after ' + str(attempt_no) + ' attempts')
+
+              except Exception as e:
+                  logger.error(e, exc_info=True)
+                  logger.info(f'Health check failed. General exception')
+                  cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=str(e))
+
+  Healthcheck:
+    Type: Custom::CodeServerHealthCheckLambda
+    DependsOn: 
+      - RunCodeServerSSMDoc  # Wait for SSM document to start
+    Properties:
+      ServiceToken: !GetAtt CodeServerHealthCheckLambda.Arn
+      ServiceTimeout: 900
+      Url: !Sub https://${CloudFrontDistribution.DomainName}/
+
+  CheckSSMDocLambda:
+    Type: AWS::Lambda::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W58
+            reason: Warning incorrectly reported. The role associated with the Lambda function has the AWSLambdaBasicExecutionRole managed policy attached, which includes permission to write CloudWatch Logs. See https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSLambdaBasicExecutionRole.html
+          - id: W89
+            reason: CloudFormation custom function does not need the scaffolding of a VPC, to do so would add unnecessary complexity
+          - id: W92
+            reason: CloudFormation custom function does not need reserved concurrent executions, to do so would add unnecessary complexity
+    Properties:
+      Description: Check SSM document on EC2 instance
+      Handler: index.lambda_handler
+      Runtime: python3.13
+      MemorySize: 128
+      Timeout: 600
+      Environment:
+        Variables:
+          RetrySleep: 2900
+          AbortTimeRemaining: 5000
+      Architectures:
+        - arm64
+      Role: !GetAtt SSMDocLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import logging
+          import time
+          import os
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              logger.debug(f'event: {event}')
+              logger.debug(f'context: {context}')
+
+              if event['RequestType'] != 'Create':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='No action to take')
+              else:
+                  sleep_ms = int(os.environ.get('RetrySleep'))
+                  abort_time_remaining_ms = int(os.environ.get('AbortTimeRemaining'))
+                  resource_properties = event['ResourceProperties']
+                  instance_id = resource_properties['InstanceId']
+                  document_name = resource_properties['DocumentName']
+
+                  logger.info(f'Checking SSM Document {document_name} on EC2 instance {instance_id}')
+
+                  retry = True
+                  attempt_no = 0
+                  time_remaining_ms = context.get_remaining_time_in_millis()
+
+                  ssm = boto3.client('ssm')
+
+                  while (retry == True):
+                      attempt_no += 1
+                      logger.info(f'Attempt: {attempt_no}. Time Remaining: {time_remaining_ms/1000}s')
+                      try:
+                          # check to see if document has completed running on instance
+                          response = ssm.list_command_invocations(
+                              InstanceId=instance_id,
+                              Details=True
+                          )
+                          logger.debug(f'Response: {response}')
+                          for invocation in response['CommandInvocations']:
+                              if invocation['DocumentName'] == document_name:
+                                  invocation_status = invocation['Status']
+                                  if invocation_status == 'Success':
+                                      logger.info(f'SSM Document {document_name} on EC2 instance {instance_id} complete. Status: {invocation_status}')                                  
+                                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='OK')
+                                      retry = False
+                                  elif invocation_status == 'Failed' or invocation_status == 'Cancelled' or invocation_status == 'TimedOut':
+                                      logger.info(f'SSM Document {document_name} on EC2 instance {instance_id} failed. Status: {invocation_status}')
+                                      reason = ''
+                                      # Get information on step that failed, otherwise it's cancelled or timeout
+                                      for step in invocation['CommandPlugins']:
+                                          step_name = step['Name']
+                                          step_status = step['Status']
+                                          step_output = step['Output']
+                                          logger.debug(f'Step {step_name} {step_status}: {step_output}')
+                                          if step_status != 'Success':
+                                              try:
+                                                  response_step = ssm.get_command_invocation(
+                                                      CommandId=invocation['CommandId'],
+                                                      InstanceId=instance_id,
+                                                      PluginName=step_name
+                                                  )
+                                                  logger.debug(f'Step details: {response_step}')
+                                                  step_output = response_step['StandardErrorContent']
+                                              except Exception as e:
+                                                  logger.error(e, exc_info=True)
+                                              logger.info(f'Step {step_name} {step_status}: {step_output}')
+                                              if reason == '':
+                                                  reason = f'Step {step_name} {step_status}: {step_output}'
+                                              else:
+                                                  reason += f'\nStep {step_name} {step_status}: {step_output}'
+                                      if reason == '':
+                                          reason = f'SSM Document {document_name} on EC2 instance {instance_id} failed. Status: {invocation_status}'
+                                      logger.info(f'{reason}')
+                                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=reason)
+                                      retry = False
+                                  else:
+                                      logger.info(f'SSM Document {document_name} on EC2 instance {instance_id} not yet complete. Status: {invocation_status}')
+                                      retry = True
+                          if retry == True:
+                              if (time_remaining_ms > abort_time_remaining_ms):
+                                  logger.info(f'Sleeping: {sleep_ms/1000}s')
+                                  time.sleep(sleep_ms/1000)
+                                  time_remaining_ms = context.get_remaining_time_in_millis()
+                              else:
+                                  logger.info(f'Time remaining {time_remaining_ms/1000}s < Abort time remaining {abort_time_remaining_ms/1000}s')
+                                  logger.info(f'Aborting check as time remaining {time_remaining_ms/1000}s < Abort time remaining {abort_time_remaining_ms/1000}s')
+                                  cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason='Timed out. Time remaining: ' + str(time_remaining_ms/1000) + 's < Abort time remaining: ' + str(abort_time_remaining_ms/1000) + 's')
+                                  retry = False
+                      except Exception as e:
+                          logger.error(e, exc_info=True)
+                          cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=str(e))
+                          retry = False
+
+  CheckCodeServerSSMDoc:
+    Type: Custom::CheckSSMDocLambda
+    DependsOn: Healthcheck   
+    Properties:   
+      ServiceToken: !GetAtt CheckSSMDocLambda.Arn
+      ServiceTimeout: 610
+      InstanceId: !Ref CodeServerInstance
+      DocumentName: !Ref CodeServerSSMDoc
+
+Outputs:
+  URL:
+    Description: Code-server URL
+    Value: !Sub https://${CloudFrontDistribution.DomainName}/?folder=${HomeFolder}
+  Password:
+    Description: Code-server Password
+    Value: !GetAtt SecretPlaintext.password
+  MCPInspectorProxy:
+    Description: MCP Inspector Proxy URL
+    Value: !Sub https://${CloudFrontDistribution.DomainName}/proxy/6277

@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Propuesta Comercial — BigCheese</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple:      #8A7DFF;
+      --purple-dark: #6B5FCC;
+      --purple-light:#E8E5FF;
+      --yellow:      #FAE428;
+      --gray-100:    #F7F7F7;
+      --gray-200:    #E8E8E8;
+      --gray-500:    #888;
+      --gray-800:    #222;
+      --white:       #FFFFFF;
+      --accent:      #8A7DFF;
+    }
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--gray-800);
+      background: var(--gray-100);
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Source Serif 4', serif;
+      color: var(--purple);
+      line-height: 1.25;
+    }
+
+    a { color: var(--purple); }
+
+    /* ── Layout ── */
+    .page {
+      max-width: 900px;
+      margin: 40px auto;
+      background: var(--white);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 32px rgba(107,45,139,.12);
+    }
+
+    /* ── Cover ── */
+    .cover {
+      background: linear-gradient(135deg, var(--purple-dark) 0%, var(--purple) 100%);
+      color: var(--white);
+      padding: 56px 64px 48px;
+      position: relative;
+    }
+
+    .cover-logo {
+      height: 48px;
+      margin-bottom: 40px;
+      display: block;
+    }
+
+    .cover-label {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: .7;
+      margin-bottom: 12px;
+    }
+
+    .cover h1 {
+      font-family: 'Source Serif 4', serif;
+      color: var(--white);
+      font-size: 2.6rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .cover-subtitle {
+      font-size: 1.1rem;
+      opacity: .85;
+      margin-bottom: 40px;
+    }
+
+    .cover-meta {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      border-top: 1px solid rgba(255,255,255,.2);
+      padding-top: 24px;
+      font-size: 13px;
+    }
+
+    .cover-meta-item strong {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: .6;
+      margin-bottom: 2px;
+    }
+
+    /* ── Body ── */
+    .body {
+      padding: 56px 64px;
+    }
+
+    /* ── Section ── */
+    .section {
+      margin-bottom: 52px;
+    }
+
+    .section-label {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .section h2 {
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--purple-light);
+    }
+
+    .section p {
+      margin-bottom: 14px;
+      color: #444;
+    }
+
+    /* ── Highlight box ── */
+    .highlight-box {
+      background: var(--purple-light);
+      border-left: 4px solid var(--purple);
+      border-radius: 0 8px 8px 0;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+
+    .highlight-box p { margin: 0; color: var(--purple-dark); font-weight: 500; }
+
+    /* ── Challenge cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: var(--gray-100);
+      border-radius: 10px;
+      padding: 20px;
+      border-top: 3px solid var(--purple);
+    }
+
+    .card h4 {
+      font-size: .9rem;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      font-size: .85rem;
+      color: var(--gray-500);
+      margin: 0;
+    }
+
+    /* ── Solution list ── */
+    .solution-list {
+      list-style: none;
+      margin-top: 16px;
+    }
+
+    .solution-list li {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .solution-list li:last-child { border-bottom: none; }
+
+    .solution-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--purple-light);
+      color: var(--purple);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: .85rem;
+      flex-shrink: 0;
+    }
+
+    .solution-list li div strong {
+      display: block;
+      color: var(--purple-dark);
+      margin-bottom: 2px;
+      font-size: .9rem;
+    }
+
+    .solution-list li div span {
+      font-size: .85rem;
+      color: #555;
+    }
+
+    /* ── Timeline ── */
+    .timeline {
+      margin-top: 20px;
+      position: relative;
+      padding-left: 28px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: var(--purple-light);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 28px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -24px;
+      top: 6px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--purple);
+      border: 2px solid var(--white);
+      box-shadow: 0 0 0 2px var(--purple);
+    }
+
+    .timeline-item h4 {
+      font-size: .95rem;
+      margin-bottom: 4px;
+    }
+
+    .timeline-item .timeline-period {
+      font-size: .8rem;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .timeline-item p {
+      font-size: .85rem;
+      color: #555;
+      margin: 0;
+    }
+
+    /* ── Investment table ── */
+    .invest-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: .9rem;
+    }
+
+    .invest-table th {
+      background: var(--purple);
+      color: var(--white);
+      padding: 12px 16px;
+      text-align: left;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      font-size: .8rem;
+      letter-spacing: .5px;
+    }
+
+    .invest-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--gray-200);
+      color: #444;
+    }
+
+    .invest-table tr:last-child td {
+      border-bottom: none;
+      font-weight: 700;
+      color: var(--purple-dark);
+      background: var(--purple-light);
+    }
+
+    .invest-table tr:nth-child(even) td { background: var(--gray-100); }
+    .invest-table tr:last-child td { background: var(--purple-light) !important; }
+
+    /* ── Reference case ── */
+    .ref-case {
+      background: var(--gray-100);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      border-left: 4px solid var(--accent);
+    }
+
+    .ref-case h4 { font-size: .95rem; margin-bottom: 6px; }
+    .ref-case p  { font-size: .85rem; color: #555; margin: 0; }
+
+    /* ── CTA ── */
+    .cta {
+      background: linear-gradient(135deg, var(--purple-dark), var(--purple));
+      border-radius: 12px;
+      padding: 40px 48px;
+      text-align: center;
+      color: var(--white);
+      margin-top: 52px;
+    }
+
+    .cta h2 {
+      color: var(--white);
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+      border: none;
+    }
+
+    .cta p {
+      opacity: .85;
+      margin-bottom: 28px;
+      color: var(--white);
+    }
+
+    .cta-btn {
+      display: inline-block;
+      background: var(--white);
+      color: var(--purple);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: .9rem;
+      padding: 14px 36px;
+      border-radius: 50px;
+      text-decoration: none;
+      letter-spacing: .5px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      background: var(--gray-100);
+      border-top: 1px solid var(--gray-200);
+      padding: 24px 64px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--gray-500);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer img { height: 28px; opacity: .6; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .cover, .body { padding: 32px 24px; }
+      .cover h1 { font-size: 1.8rem; }
+      .footer { padding: 20px 24px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══ COVER ══ -->
+  <div class="cover">
+    <img class="cover-logo" src="docs/resources/Copia de BigCheeseLab - Negro.png" alt="BigCheese" />
+    <div class="cover-label">Propuesta Comercial</div>
+    <h1>[PROPOSAL_TITLE]</h1>
+    <p class="cover-subtitle">[PROPOSAL_SUBTITLE]</p>
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <strong>Cliente</strong>
+        [CLIENT_NAME]
+      </div>
+      <div class="cover-meta-item">
+        <strong>Fecha</strong>
+        [PROPOSAL_DATE]
+      </div>
+      <div class="cover-meta-item">
+        <strong>Preparado por</strong>
+        BigCheese — AWS Premier Partner
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BODY ══ -->
+  <div class="body">
+
+    <!-- 1. Resumen Ejecutivo -->
+    <div class="section">
+      <div class="section-label">01</div>
+      <h2>Resumen Ejecutivo</h2>
+      <p>[EXECUTIVE_SUMMARY]</p>
+      <div class="highlight-box">
+        <p>[EXECUTIVE_HIGHLIGHT]</p>
+      </div>
+    </div>
+
+    <!-- 2. Desafíos del Cliente -->
+    <div class="section">
+      <div class="section-label">02</div>
+      <h2>Desafíos del Cliente</h2>
+      <p>[CHALLENGES_INTRO]</p>
+      <div class="cards">
+        <div class="card">
+          <h4>[CHALLENGE_1_TITLE]</h4>
+          <p>[CHALLENGE_1_DESC]</p>
+        </div>
+        <div class="card">
+          <h4>[CHALLENGE_2_TITLE]</h4>
+          <p>[CHALLENGE_2_DESC]</p>
+        </div>
+        <div class="card">
+          <h4>[CHALLENGE_3_TITLE]</h4>
+          <p>[CHALLENGE_3_DESC]</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Solución Propuesta -->
+    <div class="section">
+      <div class="section-label">03</div>
+      <h2>Solución Propuesta</h2>
+      <p>[SOLUTION_INTRO]</p>
+      <ul class="solution-list">
+        <li>
+          <div class="solution-icon">1</div>
+          <div>
+            <strong>[SOLUTION_1_TITLE]</strong>
+            <span>[SOLUTION_1_DESC]</span>
+          </div>
+        </li>
+        <li>
+          <div class="solution-icon">2</div>
+          <div>
+            <strong>[SOLUTION_2_TITLE]</strong>
+            <span>[SOLUTION_2_DESC]</span>
+          </div>
+        </li>
+        <li>
+          <div class="solution-icon">3</div>
+          <div>
+            <strong>[SOLUTION_3_TITLE]</strong>
+            <span>[SOLUTION_3_DESC]</span>
+          </div>
+        </li>
+        <li>
+          <div class="solution-icon">4</div>
+          <div>
+            <strong>[SOLUTION_4_TITLE]</strong>
+            <span>[SOLUTION_4_DESC]</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 4. Por qué BigCheese -->
+    <div class="section">
+      <div class="section-label">04</div>
+      <h2>Por qué BigCheese</h2>
+      <p>[WHY_BIGCHEESE_INTRO]</p>
+      <div class="ref-case">
+        <h4>[REF_CASE_1_TITLE]</h4>
+        <p>[REF_CASE_1_DESC]</p>
+      </div>
+      <div class="ref-case">
+        <h4>[REF_CASE_2_TITLE]</h4>
+        <p>[REF_CASE_2_DESC]</p>
+      </div>
+    </div>
+
+    <!-- 5. Plan de Proyecto -->
+    <div class="section">
+      <div class="section-label">05</div>
+      <h2>Plan de Proyecto</h2>
+      <p>[PLAN_INTRO]</p>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-period">[PHASE_1_PERIOD]</div>
+          <h4>[PHASE_1_TITLE]</h4>
+          <p>[PHASE_1_DESC]</p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-period">[PHASE_2_PERIOD]</div>
+          <h4>[PHASE_2_TITLE]</h4>
+          <p>[PHASE_2_DESC]</p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-period">[PHASE_3_PERIOD]</div>
+          <h4>[PHASE_3_TITLE]</h4>
+          <p>[PHASE_3_DESC]</p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-period">[PHASE_4_PERIOD]</div>
+          <h4>[PHASE_4_TITLE]</h4>
+          <p>[PHASE_4_DESC]</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Inversión -->
+    <div class="section">
+      <div class="section-label">06</div>
+      <h2>Inversión</h2>
+      <p>[INVESTMENT_INTRO]</p>
+      <table class="invest-table">
+        <thead>
+          <tr>
+            <th>Componente</th>
+            <th>Descripción</th>
+            <th>Inversión (USD)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>[INVEST_ITEM_1_NAME]</td>
+            <td>[INVEST_ITEM_1_DESC]</td>
+            <td>[INVEST_ITEM_1_AMOUNT]</td>
+          </tr>
+          <tr>
+            <td>[INVEST_ITEM_2_NAME]</td>
+            <td>[INVEST_ITEM_2_DESC]</td>
+            <td>[INVEST_ITEM_2_AMOUNT]</td>
+          </tr>
+          <tr>
+            <td>[INVEST_ITEM_3_NAME]</td>
+            <td>[INVEST_ITEM_3_DESC]</td>
+            <td>[INVEST_ITEM_3_AMOUNT]</td>
+          </tr>
+          <tr>
+            <td><strong>Total</strong></td>
+            <td>[INVEST_TOTAL_DESC]</td>
+            <td><strong>[INVEST_TOTAL_AMOUNT]</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 7. Próximos Pasos -->
+    <div class="cta">
+      <h2>Próximos Pasos</h2>
+      <p>[NEXT_STEPS]</p>
+      <a class="cta-btn" href="mailto:info@bigcheese.com.uy">Hablemos →</a>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- ══ FOOTER ══ -->
+  <div class="footer">
+    <img src="docs/resources/Powered-By_logo-horiz_CMYK (1) (1).png" alt="AWS Partner" />
+    <span>wearebigcheese.com · info@bigcheese.com.uy</span>
+    <span>Confidencial — [CLIENT_NAME] · [PROPOSAL_DATE]</span>
+  </div>
+
+</div><!-- /page -->
+</body>
+</html>
